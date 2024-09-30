@@ -12,22 +12,20 @@ import java.awt.image.*;
 import java.awt.*;
 import java.io.File;
 import java.util.TooManyListenersException;
+import java.util.List;
 
 /**
  * A JPanel with an image attached to it
+ *
  * @author Caesum
  */
-public class DPanel extends JPanel
-{
+public class DPanel extends JPanel {
     private Dimension preferredSize = new Dimension(200, 200);
-    private Dimension defaultSize = new Dimension();
-    private Dimension currentSize = new Dimension();
+    private final Dimension defaultSize = new Dimension();
+    private final Dimension currentSize = new Dimension();
 
     private DropTarget dropTarget;
     private DropTargetHandler dropTargetHandler;
-    private Point dragPoint;
-
-    private boolean dragOver = false;
 
     public DPanel() {
         //setBackground(Color.RED);
@@ -41,22 +39,23 @@ public class DPanel extends JPanel
     /**
      * Overridden paint method for the panel which
      * paints the image on the panel
+     *
      * @param g graphics object
      */
     @Override
     protected void paintComponent(Graphics g) {
         super.paintComponent(g);
-        if(bi!=null)
+        if (bi != null)
             g.drawImage(bi, 0, 0, currentSize.width, currentSize.height, this);
     }
 
     /**
      * Sets the image for the panel, and calls
      * repaint
+     *
      * @param bix Image to show on the panel
      */
-    public void setImage(BufferedImage bix)
-    {
+    public void setImage(BufferedImage bix) {
         bi = bix;
         defaultSize.width = bi.getWidth();
         defaultSize.height = bi.getHeight();
@@ -71,8 +70,8 @@ public class DPanel extends JPanel
     }
 
     public void apply(int percent) {
-        currentSize.width = (int)(defaultSize.width * (((float)percent)/100));
-        currentSize.height = (int)(defaultSize.height * (((float)percent)/100));
+        currentSize.width = (int) (defaultSize.width * (((float) percent) / 100));
+        currentSize.height = (int) (defaultSize.height * (((float) percent) / 100));
         preferredSize = currentSize;
         revalidate();
         repaint();
@@ -91,14 +90,14 @@ public class DPanel extends JPanel
         @Override
         public void dragEnter(DropTargetDragEvent dtde) {
             processDrag(dtde);
-            SwingUtilities.invokeLater(new DragUpdate(true, dtde.getLocation()));
+            SwingUtilities.invokeLater(new DragUpdate(dtde.getLocation()));
             repaint();
         }
 
         @Override
         public void dragOver(DropTargetDragEvent dtde) {
             processDrag(dtde);
-            SwingUtilities.invokeLater(new DragUpdate(true, dtde.getLocation()));
+            SwingUtilities.invokeLater(new DragUpdate(dtde.getLocation()));
             repaint();
         }
 
@@ -108,24 +107,30 @@ public class DPanel extends JPanel
 
         @Override
         public void dragExit(DropTargetEvent dte) {
-            SwingUtilities.invokeLater(new DragUpdate(false, null));
+            SwingUtilities.invokeLater(new DragUpdate(null));
             repaint();
         }
 
         @Override
         public void drop(DropTargetDropEvent dtde) {
-
-            SwingUtilities.invokeLater(new DragUpdate(false, null));
+            SwingUtilities.invokeLater(new DragUpdate(null));
 
             Transferable transferable = dtde.getTransferable();
             if (dtde.isDataFlavorSupported(DataFlavor.javaFileListFlavor)) {
                 dtde.acceptDrop(dtde.getDropAction());
                 try {
-                    java.util.List transferData = (java.util.List) transferable.getTransferData(DataFlavor.javaFileListFlavor);
+                    // 尝试获取数据
+                    Object transferDataRaw = transferable.getTransferData(DataFlavor.javaFileListFlavor);
 
-                    if (transferData.size() == 1) {
-                        StegSolve.that.loadImage((File)transferData.get(0));
-                        dtde.dropComplete(true);
+                    // 检查数据类型
+                    if (transferDataRaw instanceof List) {
+                        @SuppressWarnings("unchecked") // 添加这个注解来抑制未检查的警告
+                        List<File> transferData = (List<File>) transferDataRaw;
+
+                        if (transferData.size() == 1) {
+                            StegSolve.that.loadImage(transferData.get(0));
+                            dtde.dropComplete(true);
+                        }
                     }
 
                 } catch (Exception ex) {
@@ -167,38 +172,14 @@ public class DPanel extends JPanel
         getMyDropTarget().removeDropTargetListener(getDropTargetHandler());
     }
 
-    /*
-    @Override
-    protected void paintComponent(Graphics g) {
-        super.paintComponent(g);
-        if (dragOver) {
-            Graphics2D g2d = (Graphics2D) g.create();
-            g2d.setColor(new Color(0, 255, 0, 64));
-            g2d.fill(new Rectangle(getWidth(), getHeight()));
-            if (dragPoint != null && target != null) {
-                int x = dragPoint.x - 12;
-                int y = dragPoint.y - 12;
-                g2d.drawImage(target, x, y, this);
-            }
-            g2d.dispose();
-        }
-    }
-    */
 
     public class DragUpdate implements Runnable {
 
-        private boolean dragOver;
-        private Point dragPoint;
-
-        public DragUpdate(boolean dragOver, Point dragPoint) {
-            this.dragOver = dragOver;
-            this.dragPoint = dragPoint;
+        public DragUpdate(Point dragPoint) {
         }
 
         @Override
         public void run() {
-            DPanel.this.dragOver = dragOver;
-            DPanel.this.dragPoint = dragPoint;
             DPanel.this.repaint();
         }
     }

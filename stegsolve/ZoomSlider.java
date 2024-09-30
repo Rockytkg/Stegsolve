@@ -9,21 +9,17 @@ import java.util.List;
 
 public class ZoomSlider extends JPanel {
 
-    private JSlider slider;
-    private JTextField textBox;
-    private int value;
-    
-    public int getValue () { return value; }
+    private final JSlider slider;
+    private final JTextField textBox;
 
     void setValue(int value) {
         slider.setValue(value);
         textBox.setText(String.valueOf(value));
-        this.value = value;
         for (SliderChangeListener scl : changeListeners)
             scl.change(value);
     }
 
-    private List<SliderChangeListener> changeListeners = new ArrayList<>();
+    private final List<SliderChangeListener> changeListeners = new ArrayList<>();
 
     ZoomSlider(int min, int max, int defaultValue) {
         JLabel tip = new JLabel("缩放:");
@@ -32,9 +28,7 @@ public class ZoomSlider extends JPanel {
 
         slider = new JSlider(min, max, defaultValue);
 
-        slider.addChangeListener(e -> {
-            setValue(slider.getValue());
-        });
+        slider.addChangeListener(e -> setValue(slider.getValue()));
 
         add(slider);
 
@@ -43,7 +37,7 @@ public class ZoomSlider extends JPanel {
         textBox.addKeyListener(new KeyAdapter() {
             @Override
             public void keyPressed(KeyEvent e) {
-                if(e.getKeyCode() == KeyEvent.VK_ENTER){
+                if (e.getKeyCode() == KeyEvent.VK_ENTER) {
                     setValue(Integer.parseInt(textBox.getText()));
                 }
             }
@@ -53,7 +47,6 @@ public class ZoomSlider extends JPanel {
 
         add(textBox);
 
-        value = defaultValue;
     }
 
     void addChangeListener(SliderChangeListener listener) {

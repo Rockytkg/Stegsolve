@@ -9,15 +9,16 @@ package stegsolve;
 import com.formdev.flatlaf.FlatIntelliJLaf;
 
 import javax.swing.*;
-import javax.swing.border.Border;
-import javax.swing.event.ChangeEvent;
-import javax.swing.event.ChangeListener;
 import javax.swing.filechooser.*;
+import java.awt.datatransfer.DataFlavor;
 import java.io.*;
 import java.awt.image.*;
 import javax.imageio.*;
 import java.awt.event.*;
 import java.awt.*;
+import java.awt.dnd.*;
+import java.util.ArrayList;
+import java.util.List;
 
 // todo - sort out dimensions in linux
 // todo - width/height explorer
@@ -30,74 +31,10 @@ import java.awt.*;
 public class StegSolve extends JFrame {
     static StegSolve that;
     /**
-     * Menu option - about
-     */
-    private JMenuItem about;
-    /**
-     * Menu option - file exit
-     */
-    private JMenuItem fileExit;
-    /**
-     * Menu option - file save
-     */
-    private JMenuItem fileSave;
-    /**
-     * Menu option - file save
-     */
-    private JMenuItem fileOpen;
-    /**
-     * Menu option - analyse format
-     */
-    private JMenuItem analyseFormat;
-    /**
-     * Menu option - extract data
-     */
-    private JMenuItem analyseExtract;
-    /**
-     * Menu option - solve stereogram
-     */
-    private JMenuItem stereoSolve;
-    /**
-     * Menu option - frame browser
-     */
-    private JMenuItem frameBrowse;
-    /**
-     * Menu option - frame browser
-     */
-    private JMenuItem imageCombine;
-    /**
-     * Menu bar
-     */
-    private JMenuBar menuBar;
-    /**
-     * Sub menu - file
-     */
-    private JMenu menuFile;
-    /**
-     * Sub menu - analyse
-     */
-    private JMenu menuAnalyse;
-    /**
-     * Sub menu - help
-     */
-    private JMenu menuHelp;
-    /**
      * label that shows the number of the frame currently being shown
      */
     private JLabel nowShowing;
-    /**
-     * panel for buttons
-     */
-    private JPanel buttonPanel;
     private ZoomSlider zoomSlider;
-    /**
-     * Next frame button
-     */
-    private JButton forwardButton;
-    /**
-     * Previous frame button
-     */
-    private JButton backwardButton;
     /**
      * Panel with image on it
      */
@@ -120,30 +57,61 @@ public class StegSolve extends JFrame {
      */
     private Transform transform = null;
 
-    /**
-     * Creates new form stegsolve
-     */
-    private StegSolve() {
-        that = this;
-        initComponents();
-    }
-
     // <editor-fold defaultstate="collapsed" desc="Initcomponents()">
     private void initComponents() {
+        new DropTarget(this, new DropTargetAdapter() {
+            public void drop(DropTargetDropEvent dtde) {
+                try {
+                    dtde.acceptDrop(DnDConstants.ACTION_COPY);
+                    Object transferData = dtde.getTransferable().getTransferData(DataFlavor.javaFileListFlavor);
+                    if (transferData instanceof List<?>) {
+                        try {
+                            List<File> droppedFiles = getFiles((List<?>) transferData);
+                            if (!droppedFiles.isEmpty()) {
+                                loadImage(droppedFiles.get(0));
+                            }
+                        } catch (Exception e) {
+                            JOptionPane.showMessageDialog(null, e.getMessage(), "错误", JOptionPane.ERROR_MESSAGE);
+                        }
+                    }
+                } catch (Exception ex) {
+                    JOptionPane.showMessageDialog(null, "拖放操作失败: " + ex.getMessage(), "错误", JOptionPane.ERROR_MESSAGE);
+                    ex.printStackTrace();
+                }
+            }
+
+            private List<File> getFiles(List<?> transferData) throws Exception {
+                List<File> droppedFiles = new ArrayList<>();
+                for (Object obj : transferData) {
+                    if (obj instanceof File) {
+                        File file = (File) obj;
+                        String filename = file.getName().toLowerCase();
+                        if (filename.endsWith(".jpg") || filename.endsWith(".jpeg") || filename.endsWith(".png")
+                                || filename.endsWith(".gif") || filename.endsWith(".bmp")) {
+                            droppedFiles.add(file);
+                        } else {
+                            throw new Exception("非图片文件：" + filename);
+                        }
+                    }
+                }
+                return droppedFiles;
+            }
+        });
+
         FlatIntelliJLaf.install();
-        menuBar = new JMenuBar();
-        menuFile = new JMenu();
-        fileOpen = new JMenuItem();
-        fileSave = new JMenuItem();
-        fileExit = new JMenuItem();
-        menuAnalyse = new JMenu();
-        analyseFormat = new JMenuItem();
-        analyseExtract = new JMenuItem();
-        stereoSolve = new JMenuItem();
-        frameBrowse = new JMenuItem();
-        imageCombine = new JMenuItem();
-        menuHelp = new JMenu();
-        about = new JMenuItem();
+        JMenuBar menuBar = new JMenuBar();
+        JMenu menuFile = new JMenu();
+        JMenuItem fileOpen = new JMenuItem();
+        JMenuItem fileSave = new JMenuItem();
+        JMenuItem fileExit = new JMenuItem();
+        JMenu menuAnalyse = new JMenu();
+        JMenuItem analyseFormat = new JMenuItem();
+        JMenuItem analyseExtract = new JMenuItem();
+        JMenuItem stereoSolve = new JMenuItem();
+        JMenuItem frameBrowse = new JMenuItem();
+        JMenuItem imageCombine = new JMenuItem();
+        JMenu menuHelp = new JMenu();
+        JMenuItem about = new JMenuItem();
         nowShowing = new JLabel();
 
         setDefaultCloseOperation(WindowConstants.EXIT_ON_CLOSE);
@@ -208,10 +176,10 @@ public class StegSolve extends JFrame {
 
         textZoom.add(nowShowing, BorderLayout.NORTH);
 
-        buttonPanel = new JPanel();
-        backwardButton = new JButton("<");
+        JPanel buttonPanel = new JPanel();
+        JButton backwardButton = new JButton("<");
         backwardButton.addActionListener(this::backwardButtonActionPerformed);
-        forwardButton = new JButton(">");
+        JButton forwardButton = new JButton(">");
         forwardButton.addActionListener(this::forwardButtonActionPerformed);
         buttonPanel.add(backwardButton);
         buttonPanel.add(forwardButton);
@@ -265,14 +233,13 @@ public class StegSolve extends JFrame {
         forwardButton.getInputMap(JComponent.WHEN_IN_FOCUSED_WINDOW).put(KeyStroke.getKeyStroke(KeyEvent.VK_RIGHT, 0), "forward");
         forwardButton.getActionMap().put("forward", forwardButtonPress);
 
-        this.setTitle("StegSolve 1.5 by Souno (龙腾四季专版)");
+        this.setTitle("StegSolve");
         this.setMaximumSize(getToolkit().getScreenSize());
 
         pack();
 
         this.setSize(800, 600);
-        //setResizable(false);
-    }// </editor-fold>
+    }
 
     /**
      * Close the form on file exit
@@ -286,7 +253,7 @@ public class StegSolve extends JFrame {
     /**
      * This is used to map the left arrow key to the back button
      */
-    private Action backButtonPress = new AbstractAction() {
+    private final Action backButtonPress = new AbstractAction() {
         public void actionPerformed(ActionEvent e) {
             backwardButtonActionPerformed(e);
         }
@@ -306,7 +273,7 @@ public class StegSolve extends JFrame {
     /**
      * This is used to map the right arrow key to the forward button
      */
-    private Action forwardButtonPress = new AbstractAction() {
+    private final Action forwardButtonPress = new AbstractAction() {
         public void actionPerformed(ActionEvent e) {
             forwardButtonActionPerformed(e);
         }
@@ -374,11 +341,11 @@ public class StegSolve extends JFrame {
         if (rVal == JFileChooser.APPROVE_OPTION) {
             sfile = fileChooser.getSelectedFile();
             try {
-                BufferedImage bi2 = null;
+                BufferedImage bi2;
                 bi2 = ImageIO.read(sfile);
                 new Combiner(bi, bi2).setVisible(true);
             } catch (Exception e) {
-                JOptionPane.showMessageDialog(this, "加载文件失败: " + e.toString());
+                JOptionPane.showMessageDialog(this, "加载文件失败: " + e);
             }
         }
     }
@@ -412,7 +379,7 @@ public class StegSolve extends JFrame {
                 else
                     ImageIO.write(bi, sfile.getName().substring(rns), sfile);
             } catch (Exception e) {
-                JOptionPane.showMessageDialog(this, "写入文件失败: " + e.toString());
+                JOptionPane.showMessageDialog(this, "写入文件失败: " + e);
             }
         }
     }
@@ -434,20 +401,25 @@ public class StegSolve extends JFrame {
         }
     }
 
-    public void loadImage(String path) {
-        File sfile = new File(path);
-        loadImage(sfile);
-    }
-
     void loadImage(File sfile) {
         this.sfile = sfile;
         try {
             bi = ImageIO.read(sfile);
-            transform = new Transform(bi);
-            newImage();
-        } catch (Exception e) {
+            if (bi == null) {
+                // 处理文件格式不支持的情况
+                JOptionPane.showMessageDialog(this, "不支持的文件格式或文件损坏: " + sfile.getName(), "加载错误", JOptionPane.ERROR_MESSAGE);
+                return;
+            }
+            transform = new Transform(bi);  // 假设 Transform 构造器不会抛出异常
+            newImage();  // 假设这个方法用于更新UI或其他逻辑
+        } catch (IOException e) {
+            // 处理读取文件时的IO异常
+            JOptionPane.showMessageDialog(this, "加载文件失败: " + e.getMessage(), "IO错误", JOptionPane.ERROR_MESSAGE);
             e.printStackTrace();
-            JOptionPane.showMessageDialog(this, "加载文件失败: " + e.toString());
+        } catch (Exception e) {
+            // 处理其他可能的异常
+            JOptionPane.showMessageDialog(this, "加载图片时发生错误: " + e.getMessage(), "错误", JOptionPane.ERROR_MESSAGE);
+            e.printStackTrace();
         }
     }
 
@@ -475,10 +447,24 @@ public class StegSolve extends JFrame {
         repaint();
     }
 
+    private StegSolve(File file) {
+        that = this;
+        initComponents();
+        if (file != null) {
+            loadImage(file);
+        }
+    }
+
     /**
      * @param args the command line arguments
      */
-    public static void main(String args[]) {
-        EventQueue.invokeLater(() -> new StegSolve().setVisible(true));
+    public static void main(String[] args) {
+        EventQueue.invokeLater(() -> {
+            if (args.length > 0) {
+                new StegSolve(new File(args[0])).setVisible(true);
+            } else {
+                new StegSolve(null).setVisible(true);
+            }
+        });
     }
 }
