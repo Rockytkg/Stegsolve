@@ -3,6 +3,13 @@
 StegSolve的升级修复版本！
 
 ![](./img.png)
+
+## 1.6 changes
+
+- 完善汉化
+- 打包exe
+- 支持图片拖放打开
+
 ## 1.5 changes
 
 - 汉化部分内容
